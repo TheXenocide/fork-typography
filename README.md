@@ -178,7 +178,20 @@ _pic 4: Say with Emoji?_
 (see more sam's work at https://github.com/samhocevar/emoji.wpf)
 
 ---
+The HtmlRenderer example!
+---
 
+This is a snapshot of Html drawboard from (https://github.com/LayoutFarm/HtmlRenderer).
+The glyphs are generated/layouted with our _Typography_, and rendered with
+the PixelFarm (https://github.com/PaintLab/PixelFarm)
+
+![html_renderer_with_selection2](https://user-images.githubusercontent.com/7447159/34453250-b149ecce-ed81-11e7-885b-e4b02460fcf7.png)
+_pic 1: HtmlRenderer on GLES2 surface, text are renderered with the Typography_
+
+
+also, please note the text selection on the Html Surface. 
+
+---
 
 License
 -----------
@@ -222,4 +235,4 @@ MIT, 2004,2007, Novell Inc., for System.Drawing
 
 **Demo**
 
-MIT, 2017, Zou Wei, https://github.com/zwcloud, see more Zou Wei's GUI works at ![here](https://zwcloud.net/#project/imgui) and ![here](https://github.com/zwcloud/ImGui)
+MIT, 2017, Zou Wei, https://github.com/zwcloud, see more Zou Wei's GUI works at [here](https://zwcloud.net/#project/imgui) and [here](https://github.com/zwcloud/ImGui)

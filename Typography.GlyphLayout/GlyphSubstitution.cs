@@ -11,7 +11,7 @@ namespace Typography.TextLayout
     /// </summary>
     class GlyphSubstitution
     {
-        public GlyphSubstitution(Typeface typeface, string lang = "DFLT")
+        public GlyphSubstitution(Typeface typeface, string lang)
         {
             _language = lang;
             _typeface = typeface;
@@ -39,20 +39,25 @@ namespace Typography.TextLayout
                 }
             }
         }
-
         public string Lang
         {
             get { return _language; }
-            set { _language = value; _mustRebuildTables = true; }
         }
-
         /// <summary>
         /// enable GSUB type 4, ligation (liga)
         /// </summary>
         public bool EnableLigation
         {
             get { return _enableLigation; }
-            set { _enableLigation = value; _mustRebuildTables = true; }
+            set
+            {
+                if (value != _enableLigation)
+                {   //test change before accept value
+                    _mustRebuildTables = true;
+                }
+                _enableLigation = value;
+
+            }
         }
 
         /// <summary>
@@ -61,10 +66,18 @@ namespace Typography.TextLayout
         public bool EnableComposition
         {
             get { return _enableComposition; }
-            set { _enableComposition = value; _mustRebuildTables = true; }
-        }
+            set
+            {
+                if (value != _enableComposition)
+                {
+                    //test change before accept value
+                    _mustRebuildTables = true;
+                }
+                _enableComposition = value;
 
-        private string _language;
+            }
+        }
+        private readonly string _language;
         private bool _enableLigation = true; // enable by default
         private bool _enableComposition = true;
 
@@ -82,6 +95,7 @@ namespace Typography.TextLayout
             ScriptTable scriptTable = gsubTable.ScriptList[_language];
             if (scriptTable == null)
             {
+                //no script table for request lang-> no lookup process here
                 return;
             }
 
@@ -106,15 +120,15 @@ namespace Typography.TextLayout
                 return;
             }
 
-            // Enumerate features we want and add the corresponding lookup tables
-            foreach (int featureIndex in selectedLang.featureIndexList)
+            //(one lang may has many features)
+            //Enumerate features we want and add the corresponding lookup tables
+            foreach (ushort featureIndex in selectedLang.featureIndexList)
             {
                 FeatureList.FeatureTable feature = gsubTable.FeatureList.featureTables[featureIndex];
                 bool featureIsNeeded = false;
                 switch (feature.TagName)
                 {
-                    case "ccmp": // glyph composition/decomposition
-                                 // this version we implement ccmp
+                    case "ccmp": // glyph composition/decomposition 
                         featureIsNeeded = EnableComposition;
                         break;
                     case "liga": // Standard Ligatures --enable by default
@@ -131,5 +145,87 @@ namespace Typography.TextLayout
                 }
             }
         }
+
+        /// <summary>
+        /// collect all associate glyph index of specific input lang
+        /// </summary>
+        /// <param name="outputGlyphIndex"></param>
+        public void CollectAdditionalSubstitutionGlyphIndices(List<ushort> outputGlyphIndices)
+        {
+            if (_mustRebuildTables)
+            {
+                RebuildTables();
+                _mustRebuildTables = false;
+            }
+            //-------------
+            //add some glyphs that also need by substitution process 
+           
+            foreach (GSUB.LookupTable subLk in _lookupTables)
+            {
+                subLk.CollectAssociatedSubstitutionGlyph(outputGlyphIndices);
+            }
+            //
+            //WARN :not ensure glyph unique at this stage
+            //please do it in later state
+        }
+    }
+
+
+    public static class TypefaceExtensions
+    {
+
+        static UnicodeLangBits[] FilterOnlySelectedRange(UnicodeLangBits[] inputRanges, UnicodeLangBits[] userSpecificRanges)
+        {
+            List<UnicodeLangBits> selectedRanges = new List<UnicodeLangBits>();
+            foreach (UnicodeLangBits range in inputRanges)
+            {
+                int foundAt = System.Array.IndexOf(userSpecificRanges, range);
+                if (foundAt > 0)
+                {
+                    selectedRanges.Add(range);
+                }
+            }
+            return selectedRanges.ToArray();
+        }
+        public static void CollectAllAssociateGlyphIndex(this Typeface typeface, List<ushort> outputGlyphIndexList, ScriptLang scLang, UnicodeLangBits[] selectedRangs = null)
+        {
+            //-----------
+            //general glyph index in the unicode range
+
+            //if user dose not specific the unicode lanf bit ranges
+            //the we try to select it ourself. 
+            UnicodeLangBits[] unicodeLangBitsRanges;
+            if (ScriptLangs.TryGenUnicodeLangBitsArray(scLang.shortname, out unicodeLangBitsRanges))
+            {
+                //one lang may contains may ranges
+                if (selectedRangs != null)
+                {
+                    //select only in range 
+                    unicodeLangBitsRanges = FilterOnlySelectedRange(unicodeLangBitsRanges, selectedRangs);
+                }
+
+                foreach (UnicodeLangBits unicodeLangBits in unicodeLangBitsRanges)
+                {
+                    UnicodeRangeInfo rngInfo = unicodeLangBits.ToUnicodeRangeInfo();
+                    int endAt = rngInfo.EndAt;
+                    for (int codePoint = rngInfo.StartAt; codePoint <= endAt; ++codePoint)
+                    {
+                        ushort glyghIndex = typeface.LookupIndex(codePoint);
+                        if (glyghIndex > 0)
+                        {
+                            //add this glyph index
+                            outputGlyphIndexList.Add(glyghIndex);
+                        }
+                    }
+                }
+            }
+
+            //-----------
+            var gsub = new GlyphSubstitution(typeface, scLang.shortname);
+            gsub.CollectAdditionalSubstitutionGlyphIndices(outputGlyphIndexList);
+        }
+
     }
 }
+
+

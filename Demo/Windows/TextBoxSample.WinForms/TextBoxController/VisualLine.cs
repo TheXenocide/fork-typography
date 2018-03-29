@@ -2,7 +2,7 @@
 
 using System.Collections.Generic;
 using Typography.TextLayout;
-using Typography.Rendering;
+using Typography.Contours;
 
 namespace SampleWinForms.UI
 {
@@ -10,7 +10,7 @@ namespace SampleWinForms.UI
     class VisualLine
     {
 
-        Line _line;
+        SmallLine _line;
         DevTextPrinterBase _printer;
 
         float toPxScale = 1;
@@ -18,7 +18,7 @@ namespace SampleWinForms.UI
         {
 
         }
-        public void BindLine(Line line)
+        public void BindLine(SmallLine line)
         {
             this._line = line;
         }
@@ -31,13 +31,13 @@ namespace SampleWinForms.UI
         public float Y { get; set; }
         public void SetCharIndexFromPos(float x, float y)
         {
-            _line.SetCharIndexFromPos(x, y, toPxScale);
+            _line.SetCharIndexFromPos(x, y);
         }
 
         public void Draw()
         {
 
-            List<GlyphPlan> glyphPlans = _line._glyphPlans;
+            GlyphPlanList glyphPlans = _line._glyphPlans;
             List<UserCharToGlyphIndexMap> userCharToGlyphIndexMap = _line._userCharToGlyphMap;
             if (_line.ContentChanged)
             {
@@ -45,13 +45,14 @@ namespace SampleWinForms.UI
                 char[] textBuffer = _line._charBuffer.ToArray();
                 glyphPlans.Clear();
 
-
                 userCharToGlyphIndexMap.Clear();
 
                 //read glyph plan and userCharToGlyphIndexMap                 
-                _printer.GlyphLayoutMan.GenerateGlyphPlans(textBuffer, 0, textBuffer.Length, glyphPlans, userCharToGlyphIndexMap);
+                
+                _printer.GenerateGlyphPlan(textBuffer, 0, textBuffer.Length, glyphPlans, userCharToGlyphIndexMap);
 
-                toPxScale = _printer.Typeface.CalculateToPixelScaleFromPointSize(_printer.FontSizeInPoints);
+
+                toPxScale = _printer.Typeface.CalculateScaleToPixelFromPointSize(_printer.FontSizeInPoints);
                 _line.ContentChanged = false;
             }
 
